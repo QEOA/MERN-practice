@@ -12,6 +12,57 @@ const TodoRouter = (server: FastifyInstance, opts: RouteShorthandOptions, done: 
 
     // TODO: Add CRUD endpoints, i.e. get, post, update, delete
     // NOTE: the url should be RESTful
+    server.get('/todos', {}, async (request, reply) => {
+        try {
+            const todos: { todos: Array<ITodo> } = { todos: await todoRepo.getTodos() }
+            return reply.code(200).send(todos)
+        } catch (error) {
+            request.log.error(error)
+            return reply.send(500)
+        }
+    })
+
+    server.post('/todos', opts, async (request, reply) => {
+        try {
+            const todoBody: ITodo = request.body as ITodo
+            const todo: ITodo = await todoRepo.addTodo(todoBody)
+            return reply.status(201).send({ todo })
+        } catch (error) {
+            request.log.error(error)
+            return reply.send(500)
+        }
+    })
+
+    server.put<{ Params: IdParam}>('/todos/:id', opts, async (request, reply) => {
+        try {
+            const id = request.params.id
+            const todoBody = request.body as ITodo
+            const todo: ITodo | null = await todoRepo.updateTodo(id, todoBody)
+            if (todo) {
+                return reply.status(200).send({ todo })
+            } else {
+                return reply.status(404).send({ msg: `Not Found Todo:${id}` })
+            }
+        } catch (error) {
+            console.error(`PUT /todos/${request.params.id} Error: ${error}`)
+            return reply.status(500).send(`[Server Error]: ${error}`)
+        }
+    })
+
+    server.delete<{ Params: IdParam }>('/todos/:id', opts, async (request, reply) => {
+        try {
+            const id = request.params.id
+            const todo: ITodo | null = await todoRepo.deleteTodo(id)
+            if (todo) {
+                return reply.status(204).send()
+            } else {
+                return reply.status(404).send({ msg: `Not Found Todo:${id}` })
+            }
+        } catch (error) {
+            console.error(`DELETE /todos/${request.params.id} Error: ${error}`)
+            return reply.status(500).send(`[Server Error]: ${error}`)
+        }
+    })
 
     done()
 }
